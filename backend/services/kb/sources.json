@@ -1,0 +1,32 @@
+{
+  "sources": [
+    {
+      "id": "kometta_journal",
+      "title": "Кометта — Журнал",
+      "type": "crawl",
+      "entry_urls": ["https://kometta.ru/journal/"],
+      "allow_domains": ["kometta.ru"],
+      "include_prefixes": ["https://kometta.ru/journal/"],
+      "exclude_prefixes": [],
+      "priority": 10,
+      "enabled": true,
+      "max_depth": 4,
+      "max_pages": 300,
+      "crawl_delay_ms": 1000
+    },
+    {
+      "id": "pumpsu_journal",
+      "title": "Pump.su — Журнал",
+      "type": "crawl",
+      "entry_urls": ["https://pump.su/journal/"],
+      "allow_domains": ["pump.su"],
+      "include_prefixes": ["https://pump.su/journal/"],
+      "exclude_prefixes": [],
+      "priority": 6,
+      "enabled": true,
+      "max_depth": 4,
+      "max_pages": 300,
+      "crawl_delay_ms": 1000
+    }
+  ]
+}
