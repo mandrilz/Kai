@@ -1,0 +1,9 @@
+from enum import Enum
+
+
+class FSMState(str, Enum):
+    INTENT_DETECTION = "INTENT_DETECTION"
+    SLOT_FILLING = "SLOT_FILLING"
+    RESPONSE_GENERATION = "RESPONSE_GENERATION"
+    FOLLOW_UP = "FOLLOW_UP"
+
