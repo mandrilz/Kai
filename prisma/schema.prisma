@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String   @id @default(uuid())
+  tgId                  BigInt   @unique
+  berries               Int      @default(1)
+  language              String?  // 'en', 'ru', 'id', 'pt', 'hi' - nullable until user selects
+  termsAccepted         Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  payments              Payment[]
+  referralRewards       ReferralReward[]
+  referralsAsInviter     Referral[] @relation("Inviter") // User as inviter (one-to-many)
+  referralAsInvitee      Referral? @relation("Invitee") // User as invitee (one-to-one via inviteeId unique)
+  tracking               UserTracking?
+  trackingEvents         TrackingEvent[]
+
+  @@map("users")
+}
+
+model Payment {
+  id          String   @id @default(uuid())
+  userId      String
+  tgId        BigInt?
+  telegramPaymentChargeId String?
+  provider    String   @default("telegram")
+  sku         String
+  amountRub   Int
+  creditsAdded Int
+  payloadJson String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+// Referral relationship: who invited whom
+model Referral {
+  id            String   @id @default(uuid())
+  inviterId     String   // User.id (UUID) who invited
+  inviteeId     String   @unique // User.id (UUID) who was invited (unique - one inviter per invitee)
+  createdAt     DateTime @default(now())
+  createdFrom   String?  // Source: 'start_param', 'campaign', etc.
+  createdChatType String? // 'private', 'group', 'supergroup', 'channel'
+  
+  inviter       User     @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee       User     @relation("Invitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  
+  rewards       ReferralReward[]
+
+  @@index([inviterId])
+  @@index([inviteeId])
+  @@index([createdAt])
+  @@map("referrals")
+}
+
+// Referral reward tracking: when and how much was rewarded
+model ReferralReward {
+  id            String   @id @default(uuid())
+  referralId   String   @unique // Which referral relationship (UNIQUE - one reward per referral)
+  inviterId     String   // User.id (UUID) who received the reward
+  berriesRewarded Int   @default(1)
+  createdAt     DateTime @default(now())
+  
+  referral      Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  inviter       User     @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([inviterId])
+  @@index([createdAt])
+  @@map("referral_rewards")
+}
+
+// UTM tracking: source attribution for user acquisition
+model UserTracking {
+  id            String   @id @default(uuid())
+  userId        String   @unique // One tracking record per user
+  tgId          BigInt   @unique
+  firstSource   String   // First UTM source (utm_<source> or "organic")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events        TrackingEvent[]
+
+  @@index([firstSource])
+  @@index([createdAt])
+  @@map("user_tracking")
+}
+
+// Tracking events: start_click, first_generation, payment
+model TrackingEvent {
+  id            String   @id @default(uuid())
+  userId        String
+  trackingId    String?  // Optional link to UserTracking
+  eventType     String   // 'start_click', 'first_generation', 'payment'
+  source        String   // Attribution source (always firstSource from user_tracking)
+  metadata      String?  @db.Text // JSON metadata (optional)
+  createdAt     DateTime @default(now())
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tracking      UserTracking? @relation(fields: [trackingId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, eventType]) // One event type per user (unique constraint)
+  @@index([eventType])
+  @@index([source])
+  @@index([createdAt])
+  @@map("tracking_events")
+}
+
